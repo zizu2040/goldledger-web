@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#caa023">
+<title>محاسبة الذهب</title>
+<style>
+  :root{ --gold:#caa023; --gold2:#9a7610; --brand:#2b66d9; --pos:#1c8c4a; --neg:#c0392b; --bg:#f2f3f7; --card:#fff; --txt:#1b1b1f; --sec:#7a7a85; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif; }
+  html,body{ margin:0; background:var(--bg); color:var(--txt); }
+  body{ padding-bottom:78px; max-width:560px; margin:0 auto; }
+  .topbar{ position:sticky; top:0; z-index:20; background:rgba(242,243,247,.92); backdrop-filter:blur(10px); text-align:center; padding:12px; font-weight:700; font-size:18px; border-bottom:1px solid #e3e3ea; }
+  .wrap{ padding:14px; }
+  .card{ background:var(--card); border-radius:18px; padding:14px; margin-bottom:12px; box-shadow:0 4px 16px rgba(0,0,0,.05); }
+  .row{ display:flex; align-items:center; gap:8px; }
+  .between{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .ttl{ font-weight:700; font-size:16px; }
+  .sec{ color:var(--sec); font-size:13px; }
+  .mut{ color:var(--sec); font-size:12px; }
+  input,select,button,textarea{ font-size:16px; }
+  input,select,textarea{ width:100%; padding:11px; border:1px solid #d8d8e0; border-radius:12px; background:#fafafe; text-align:right; }
+  .btn{ border:none; border-radius:14px; padding:13px; font-weight:700; color:#fff; width:100%; cursor:pointer; }
+  .btn.gold{ background:linear-gradient(135deg,var(--gold),var(--gold2)); } .btn.pos{ background:var(--pos);} .btn.neg{ background:var(--neg);} .btn.brand{ background:var(--brand);}
+  .btn.sm{ width:auto; padding:8px 12px; font-size:13px; border-radius:10px; }
+  .chip{ flex:1; text-align:center; background:#f4f4fb; border-radius:12px; padding:10px 6px; }
+  .chip b{ display:block; font-size:15px; } .chip span{ font-size:11px; color:var(--sec); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat{ background:var(--card); border-radius:16px; padding:14px; text-align:right; box-shadow:0 4px 16px rgba(0,0,0,.05); }
+  .stat .ic{ width:38px;height:38px;border-radius:11px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;margin-right:auto;}
+  .stat b{ display:block; font-size:18px; margin-top:6px;} .stat span{ font-size:12px; color:var(--sec);}
+  .item{ padding:9px 0; border-bottom:1px solid #eee; } .item:last-child{ border-bottom:none; }
+  .price{ display:inline-flex; flex-direction:column; align-items:center; min-width:72px; padding:9px 6px; margin-left:8px; background:#fbf3d4; border:1px solid #e7cf6a66; border-radius:12px; }
+  .price b{ color:var(--gold2); font-size:15px; } .price span{ font-size:11px; color:var(--sec); }
+  .scroll{ display:flex; overflow-x:auto; padding-bottom:4px; }
+  .tabbar{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:560px; background:#fff; border-top:1px solid #e3e3ea; display:flex; padding:6px 4px 10px; z-index:30; }
+  .tab{ flex:1; text-align:center; color:var(--sec); font-size:11px; padding:4px 0; cursor:pointer; border:none; background:none; }
+  .tab.on{ color:var(--brand); } .tab .e{ display:block; font-size:20px; }
+  .hero{ background:linear-gradient(135deg,#d9b340,#9a7610); color:#fff; border-radius:22px; padding:18px; }
+  .hero h1{ font-size:30px; margin:6px 0; } .pill{ flex:1; text-align:center; background:rgba(255,255,255,.2); border-radius:20px; padding:8px; font-size:12px; }
+  .badge{ background:#eef; color:var(--brand); border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; }
+  .lbl{ font-size:13px; color:var(--sec); margin:8px 2px 4px; display:block; }
+  .modal{ position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:50; display:flex; align-items:flex-end; }
+  .sheet{ background:var(--bg); width:100%; max-width:560px; margin:0 auto; border-radius:20px 20px 0 0; max-height:90vh; overflow:auto; padding:14px; }
+  .x{ background:none;border:none;font-size:22px;color:var(--sec);cursor:pointer; }
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; } .seg button{ flex:1; min-width:90px; padding:10px; border:1px solid #d8d8e0; border-radius:12px; background:#fafafe; cursor:pointer; font-weight:600; }
+  .seg button.on{ background:var(--brand); color:#fff; border-color:var(--brand); }
+  .center{ text-align:center; color:var(--sec); padding:24px; }
+  .green{ color:var(--pos);} .red{ color:var(--neg);} .gold-t{ color:var(--gold2);} .brand-t{ color:var(--brand);} .orange-t{ color:#e07a00; }
+  a.link{ color:var(--brand); cursor:pointer; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL="https://xdihwyjzihygzdcslokb.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkaWh3eWp6aWh5Z3pkY3Nsb2tiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MTkzNjAsImV4cCI6MjA5NzE5NTM2MH0.3aLB1jfIw5tqk7JnvWHmYSs6BG2UyCbKVkEIn4AeRUQ";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const $ = s => document.querySelector(s);
+const app = $("#app");
+let USER=null, TAB="board", STATE={};
+
+// ===== helpers =====
+const money = v => (Math.round((v||0)*100)/100).toLocaleString("ar-SA",{maximumFractionDigits:2}) + " ﷼";
+const gn = v => { v=v||0; return v===Math.round(v)? String(Math.round(v)) : v.toFixed(1); };
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const monthKey = d => { const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0"); };
+const monthAr = k => { if(!k) return "—"; const [y,m]=k.split("-"); return new Date(y,m-1,1).toLocaleDateString("ar",{month:"long",year:"numeric"}); };
+const dayAr = d => new Date(d).toLocaleString("ar",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+const uid = () => USER.id;
+async function getJSON(t){ const {data}=await sb.from(t).select("*").order("created_at",{ascending:false}); return data||[]; }
+
+// ===== AUTH =====
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  USER = session?.user || null;
+  sb.auth.onAuthStateChange((_e,s)=>{ const u=s?.user||null; if((u&&!USER)||(!u&&USER)){ USER=u; render(); } });
+  render();
+}
+function authView(){
+  app.innerHTML = `
+   <div class="topbar">محاسبة الذهب</div>
+   <div class="wrap">
+    <div class="card" style="margin-top:30px;text-align:center">
+      <div style="font-size:46px">🪙</div>
+      <div class="ttl" style="margin:8px">تسجيل الدخول</div>
+      <input id="em" placeholder="البريد الإلكتروني" type="email" style="text-align:left;direction:ltr;margin-bottom:8px">
+      <input id="pw" placeholder="كلمة المرور" type="password" style="text-align:left;direction:ltr;margin-bottom:10px">
+      <button class="btn gold" onclick="doLogin()">دخول</button>
+      <div id="autherr" class="red mut" style="margin-top:8px"></div>
+      <div class="mut" style="margin-top:10px">ما عندك حساب؟ <a class="link" onclick="doSignup()">إنشاء حساب</a></div>
+    </div>
+   </div>`;
+}
+async function doLogin(){
+  const email=$("#em").value.trim(), password=$("#pw").value;
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error) $("#autherr").textContent="تعذّر الدخول: "+error.message;
+}
+async function doSignup(){
+  const email=$("#em").value.trim(), password=$("#pw").value;
+  if(!email||password.length<6){ $("#autherr").textContent="أدخل بريد وكلمة مرور (٦ أحرف+)"; return; }
+  const {error}=await sb.auth.signUp({email,password});
+  $("#autherr").textContent = error? ("خطأ: "+error.message) : "تم — تأكد من بريدك ثم سجّل الدخول.";
+}
+async function logout(){ await sb.auth.signOut(); USER=null; render(); }
+
+// ===== SHELL =====
+const TABS=[
+  {k:"board", e:"📊", t:"اللوحة"},
+  {k:"exp",   e:"➖", t:"المصاريف"},
+  {k:"calc",  e:"🧮", t:"الحساب"},
+  {k:"rep",   e:"📄", t:"التقارير"},
+  {k:"jard",  e:"🗓️", t:"الجرد"},
+];
+function render(){
+  if(!USER){ authView(); return; }
+  app.innerHTML = `<div class="topbar" id="title">محاسبة الذهب</div><div class="wrap" id="view"><div class="center">جارٍ التحميل…</div></div>
+   <div class="tabbar">${TABS.map(t=>`<button class="tab ${t.k===TAB?'on':''}" onclick="go('${t.k}')"><span class="e">${t.e}</span>${t.t}</button>`).join("")}</div>`;
+  draw();
+}
+function go(k){ TAB=k; render(); }
+function setTitle(t){ const e=$("#title"); if(e) e.textContent=t; }
+function draw(){
+  if(TAB==="board") viewBoard();
+  else if(TAB==="exp") viewExp();
+  else if(TAB==="calc") viewCalc();
+  else if(TAB==="rep") viewRep();
+  else if(TAB==="jard") viewJard();
+}
+
+// ===== BOARD =====
+async function viewBoard(){
+  setTitle("لوحة الذهب");
+  const [mills, exps, sales] = await Promise.all([ getJSON("gold_mills"), getJSON("gold_expenses"), getJSON("gold_sales") ]);
+  const expense = exps.reduce((a,b)=>a+(+b.amount||0),0);
+  const v=$("#view"); if(!v) return;
+  v.innerHTML = `
+   <div class="card" id="prices"><div class="center">جلب الأسعار…</div></div>
+   <div class="hero">
+     <div class="between"><span>🪙</span><span>صافي الخزنة</span></div>
+     <h1>${money(-expense + 0)}</h1>
+     <div class="row" style="gap:8px"><div class="pill">مصروف: ${money(expense)}</div><div class="pill">بيعات: ${sales.length}</div></div>
+   </div>
+   <div class="grid2">
+     <div class="stat"><div class="ic" style="background:var(--brand)">⚙️</div><b>${mills.length}</b><span>المطاحن</span></div>
+     <div class="stat"><div class="ic" style="background:var(--pos)">⚖️</div><b>${sales.length}</b><span>عمليات البيع</span></div>
+   </div>
+   <div class="card row" style="justify-content:space-between;cursor:pointer" onclick="go('manage')">
+     <span>⚙️</span><b>المطاحن والمشتركين</b><span style="margin-right:auto">›</span></div>
+   <button class="btn" style="background:#eee;color:#444" onclick="logout()">تسجيل الخروج</button>`;
+  loadPrices();
+}
+async function loadPrices(){
+  const box=$("#prices"); if(!box) return;
+  try{
+    const { data } = await sb.functions.invoke("gold-prices");
+    const order=["24","22","21","18","14"], p=data?.prices||{};
+    const t = new Date().toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
+    const tag = data?.siteUpdated ? `● saudigoldprice • ${data.siteUpdated}` : `● مباشر ${t}`;
+    box.innerHTML = `<div class="between"><span class="green mut">${tag}</span><span class="sec">📈 أسعار الذهب الآن (﷼/جرام)</span></div>
+      <div class="scroll" style="margin-top:8px">${order.filter(k=>p[k]).map(k=>`<div class="price"><span>عيار ${k}</span><b>${(+p[k]).toFixed(2)}</b></div>`).join("")||'<span class="mut">تعذّر الجلب</span>'}</div>`;
+  }catch(e){ box.innerHTML=`<span class="mut">تعذّر جلب الأسعار</span>`; }
+  if(TAB==="board") setTimeout(loadPrices, 60000);
+}
+
+// ===== EXPENSES =====
+async function viewExp(){
+  setTitle("المصاريف");
+  const exps = (await sb.from("gold_expenses").select("*").eq("settled",false).order("occurred_at",{ascending:false})).data||[];
+  const groups={}; exps.forEach(e=>{ const k=monthKey(e.occurred_at||e.created_at); (groups[k]=groups[k]||[]).push(e); });
+  const keys=Object.keys(groups).sort().reverse();
+  const v=$("#view"); if(!v) return;
+  v.innerHTML = keys.map(k=>{ const items=groups[k]; const tot=items.reduce((a,b)=>a+(+b.amount),0);
+    return `<div class="card"><div class="between"><span class="sec">${items.length>1?money(tot):""}</span><b>${monthAr(k)}</b></div>
+      ${items.map(e=>`<div class="item between"><span class="red" style="font-weight:700">${money(e.amount)}</span>
+        <div style="text-align:right"><div>${esc(e.category||"مصروف")}</div><div class="mut">${e.occurred_at?dayAr(e.occurred_at):""}</div></div>
+        <button class="x" onclick="delExp('${e.id}')">🗑</button></div>`).join("")}</div>`;
+  }).join("") || `<div class="center">لا مصروفات غير مجرودة.</div>`;
+  v.innerHTML += `<button class="btn neg" onclick="addExpSheet()">➕ إضافة مصروف</button>`;
+}
+function addExpSheet(){
+  openSheet("مصروف جديد", `
+    <label class="lbl">المبلغ</label><input id="ea" type="number" inputmode="decimal">
+    <label class="lbl">سبب المصروف (وقود/صيانة/نقل...)</label><input id="ec">
+    <label class="lbl">التاريخ والوقت</label><input id="ed" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}">
+    <label class="lbl">ملاحظات</label><input id="en">
+    <button class="btn neg" style="margin-top:14px" onclick="saveExp()">حفظ</button>`);
+}
+async function saveExp(){
+  const amount=parseFloat($("#ea").value); if(isNaN(amount)) return;
+  await sb.from("gold_expenses").insert({ user_id:uid(), operation_id:null, mill_id:null, amount, category:$("#ec").value||null, paid_by:null, occurred_at:new Date($("#ed").value).toISOString(), notes:$("#en").value||null });
+  closeSheet(); draw();
+}
+async function delExp(id){ if(!confirm("حذف هذا المصروف؟"))return; await sb.from("gold_expenses").delete().eq("id",id); draw(); }
+
+// ===== CALC (mills -> sale) =====
+async function viewCalc(){
+  setTitle("الحساب — تسجيل البيع");
+  const mills = await getJSON("gold_mills");
+  const v=$("#view"); if(!v) return;
+  v.innerHTML = mills.map(m=>`<div class="card row" style="justify-content:space-between;cursor:pointer" onclick="millCalc('${m.id}')">
+     <span style="color:var(--sec)">›</span><div style="text-align:right;margin-right:auto"><b>${esc(m.name)}</b><div class="mut">${m.owner_kind==='mine'?'ملكي':'صديق'}</div></div><span>⚙️</span></div>`).join("")
+     || `<div class="center">لا مطاحن — أضفها من «اللوحة ← المطاحن والمشتركين».</div>`;
+}
+async function millCalc(id){
+  const [mills, owners, sales, sellers] = await Promise.all([ getJSON("gold_mills"),
+    (sb.from("gold_mill_owners").select("*").eq("mill_id",id)).then(r=>r.data||[]),
+    (sb.from("gold_sales").select("*").eq("mill_id",id).order("created_at",{ascending:false})).then(r=>r.data||[]),
+    getJSON("gold_sellers") ]);
+  const m = mills.find(x=>x.id===id); STATE.seller = sellers[0]?.id||null;
+  const body = `
+    <div class="card"><div class="between"><span></span><b>المشتركون في ${esc(m.name)}</b></div>
+      ${owners.map(o=>`<div class="item between"><span class="brand-t" style="font-weight:700">${Math.round(o.percent)}%</span><span>${esc(o.owner_name)}</span></div>`).join("")||'<div class="mut">لا مشتركين.</div>'}
+      <div class="item between"><span class="red">${Math.round(m.expense_percent||0)}%</span><span class="mut">نسبة هذه المطحنة من المصاريف</span></div>
+    </div>
+    <div class="card"><div class="between"><span></span><b>تسجيل بيعة</b></div>
+      <label class="lbl">الغلة الخام (جم)</label><input id="sraw" type="number" inputmode="decimal">
+      <label class="lbl">الصافي بعد الصب (جم)</label><input id="snet" type="number" inputmode="decimal">
+      <label class="lbl">العيار (مثل: فوق ٢١)</label><input id="skarat">
+      <label class="lbl">سعر الجرام</label><input id="sprice" type="number" inputmode="decimal">
+      <label class="lbl">مين باع</label>
+      <div class="seg" id="sellseg">${sellers.length?sellers.map(s=>`<button data-id="${s.id}" class="${s.id===STATE.seller?'on':''}" onclick="pickSeller('${s.id}')">${esc(s.name)} — ${gn(s.per_gram_rate)}/جم</button>`).join(""):'<span class="mut">أضف بائع من «المطاحن والمشتركين».</span>'}</div>
+      <button class="btn pos" style="margin-top:14px" onclick="saveSale('${id}')">✓ تسجيل البيع</button>
+    </div>
+    <div class="card"><div class="between"><span class="sec">إجمالي ${money(sales.reduce((a,b)=>a+(+b.value),0))}</span><b>بيعات المطحنة</b></div>
+      ${sales.map(s=>`<div class="item between"><span class="green" style="font-weight:700">${money(s.value)}</span>
+        <div style="text-align:right"><div>صافي ${gn(s.net_grams)} جم${s.karat?' • عيار '+esc(s.karat):''}</div><div class="mut">${s.seller_name?'باعها '+esc(s.seller_name):'بدون بائع'} ${s.created_at?'• '+dayAr(s.created_at):''}</div></div>
+        <button class="x" onclick="delSale('${s.id}','${id}')">🗑</button></div>`).join("")||'<div class="mut">لا بيعات.</div>'}
+    </div>`;
+  STATE.sellers=sellers;
+  openSheet(esc(m.name), body, true);
+}
+function pickSeller(id){ STATE.seller=id; document.querySelectorAll("#sellseg button").forEach(b=>b.classList.toggle("on", b.dataset.id===id)); }
+async function saveSale(millId){
+  const net=parseFloat($("#snet").value), price=parseFloat($("#sprice").value);
+  if(isNaN(net)||isNaN(price)){ alert("أدخل الصافي والسعر"); return; }
+  const raw=parseFloat($("#sraw").value); const karat=$("#skarat").value||null;
+  const sel=(STATE.sellers||[]).find(s=>s.id===STATE.seller);
+  const now=new Date().toISOString();
+  await sb.from("gold_production").insert({ user_id:uid(), operation_id:null, mill_id:millId, raw_grams:isNaN(raw)?net:raw, grams:net, karat, yield_date:now });
+  await sb.from("gold_sales").insert({ user_id:uid(), mill_id:millId, raw_grams:isNaN(raw)?net:raw, net_grams:net, karat, price, value:net*price, breakdown:[], seller_name:sel?.name||null, seller_rate:sel?.per_gram_rate||0 });
+  closeSheet(); millCalc(millId);
+}
+async function delSale(id,millId){ if(!confirm("حذف البيعة؟"))return; await sb.from("gold_sales").delete().eq("id",id); millCalc(millId); }
+
+// ===== REPORTS =====
+async function viewRep(){
+  setTitle("التقارير");
+  const [mills, sales] = await Promise.all([ getJSON("gold_mills"), getJSON("gold_sales") ]);
+  const v=$("#view"); if(!v) return;
+  v.innerHTML = mills.map(m=>{ const ms=sales.filter(s=>s.mill_id===m.id); const tot=ms.reduce((a,b)=>a+(+b.value),0);
+    return `<div class="card"><div class="between"><span class="green" style="font-weight:700">${money(tot)}</span><b>${esc(m.name)}</b></div>
+      ${ms.slice(0,12).map(s=>`<div class="item between"><span>${money(s.value)}</span><span class="mut">صافي ${gn(s.net_grams)} جم • ${s.created_at?dayAr(s.created_at):''}</span></div>`).join("")||'<div class="mut">لا بيعات.</div>'}</div>`;
+  }).join("") || `<div class="center">لا مطاحن بعد.</div>`;
+}
+
+// ===== JARD =====
+async function viewJard(){
+  setTitle("الجرد الشهري");
+  const [mills, owners, sales, exps, setls] = await Promise.all([
+    getJSON("gold_mills"), getJSON("gold_mill_owners"), getJSON("gold_sales"), getJSON("gold_expenses"), getJSON("gold_settlements") ]);
+  STATE.j={mills,owners,sales,exps};
+  const monthsSet=new Set(); sales.forEach(s=>monthsSet.add(monthKey(s.created_at))); exps.forEach(e=>monthsSet.add(monthKey(e.occurred_at||e.created_at)));
+  const months=[...monthsSet].filter(Boolean).sort().reverse();
+  if(!STATE.jmonth||!months.includes(STATE.jmonth)) STATE.jmonth=months[0]||monthKey(new Date());
+  const v=$("#view"); if(!v) return;
+  v.innerHTML = `
+    <div class="card"><div class="between"><span></span><b>اعمل الجرد</b></div>
+      ${months.length? `<label class="lbl">الشهر</label>
+      <select id="jm" onchange="STATE.jmonth=this.value">${months.map(k=>`<option value="${k}" ${k===STATE.jmonth?'selected':''}>${monthAr(k)}</option>`).join("")}</select>
+      <button class="btn gold" style="margin-top:12px" onclick="runJard()">ƒ(x) اجرد</button>`
+      : `<div class="mut">لا بيانات — سجّل بيعات من «الحساب».</div>`}
+    </div>
+    <div id="jres"></div>
+    <div id="jfiles"></div>`;
+  renderFiles(setls);
+}
+function computeJard(){
+  const {mills,owners,sales,exps}=STATE.j, mk=STATE.jmonth;
+  const ms=sales.filter(s=>monthKey(s.created_at)===mk);
+  const me=exps.filter(e=>monthKey(e.occurred_at||e.created_at)===mk);
+  const totalExp=me.reduce((a,b)=>a+(+b.amount),0);
+  const result=[];
+  mills.forEach(m=>{ const sm=ms.filter(s=>s.mill_id===m.id); const value=sm.reduce((a,b)=>a+(+b.value),0); const grams=sm.reduce((a,b)=>a+(+b.net_grams),0);
+    if(value===0&&grams===0)return;
+    const sellerCut=sm.reduce((a,b)=>a+(+b.net_grams)*(+b.seller_rate||0),0);
+    const expShare=totalExp*(m.expense_percent||0)/100; const net=value-sellerCut-expShare;
+    const shares=owners.filter(o=>o.mill_id===m.id).map(o=>({name:o.owner_name,percent:o.percent,amount:net*o.percent/100}));
+    result.push({name:m.name,value,grams,sellerCut,expShare,net,shares});
+  });
+  const td={}; ms.forEach(s=>{ if(!s.seller_name)return; const c=td[s.seller_name]||[0,0,0]; td[s.seller_name]=[c[0]+1,c[1]+(+s.net_grams),c[2]+(+s.net_grams)*(+s.seller_rate||0)]; });
+  const tally=Object.entries(td).map(([name,[trips,grams,comm]])=>({name,trips,grams,comm})).sort((a,b)=>b.comm-a.comm);
+  const rValue=ms.reduce((a,b)=>a+(+b.value),0), rGrams=ms.reduce((a,b)=>a+(+b.net_grams),0), rSeller=result.reduce((a,b)=>a+b.sellerCut,0);
+  return {result,tally,rValue,rGrams,rExpenses:totalExp,rSeller,rNet:rValue-totalExp-rSeller,monthExpIds:me.map(e=>e.id)};
+}
+function runJard(){
+  const j=computeJard(); STATE.jcalc=j;
+  const box=$("#jres");
+  if(!j.result.length){ box.innerHTML=`<div class="center">ما فيه بيعات في ${monthAr(STATE.jmonth)}.</div>`; return; }
+  box.innerHTML = `
+    <div class="grid2">
+      <div class="stat"><div class="ic" style="background:var(--pos)">💵</div><b>${money(j.rValue)}</b><span>إجمالي المطاحن</span></div>
+      <div class="stat"><div class="ic" style="background:#e07a00">🧍</div><b>${money(j.rSeller)}</b><span>عمولة البائعين</span></div>
+      <div class="stat"><div class="ic" style="background:var(--neg)">➖</div><b>${money(j.rExpenses)}</b><span>إجمالي المصاريف</span></div>
+      <div class="stat"><div class="ic" style="background:var(--brand)">🟰</div><b>${money(j.rNet)}</b><span>الصافي</span></div>
+    </div>
+    ${j.tally.length?`<div class="card"><div class="between"><span></span><b>🚶 مين طلع هذا الشهر</b></div>
+      ${j.tally.map(t=>`<div class="item between"><span class="orange-t" style="font-weight:700">${money(t.comm)}</span><div style="text-align:right"><div>${esc(t.name)}</div><div class="mut">طلع ${t.trips} مرّة • ${gn(t.grams)} جم</div></div></div>`).join("")}</div>`:""}
+    ${j.result.map(m=>`<div class="card"><div class="between"><span class="green" style="font-weight:700">${money(m.value)}</span><div style="text-align:right"><b>${esc(m.name)}</b><div class="mut">${gn(m.grams)} جم</div></div></div>
+      <div class="item between"><span class="green">${money(m.value)}</span><span class="mut">كم جابت</span></div>
+      ${m.sellerCut>0?`<div class="item between"><span class="orange-t">− ${money(m.sellerCut)}</span><span class="mut">عمولة البائعين</span></div>`:""}
+      <div class="item between"><span class="red">− ${money(m.expShare)}</span><span class="mut">نسبة مصروفها</span></div>
+      <div class="item between"><span class="brand-t" style="font-weight:700">= ${money(m.net)}</span><span>صافي المطحنة</span></div>
+      ${m.shares.length?`<div class="mut" style="text-align:right;margin-top:6px">نصيب كل مشترك</div>`+m.shares.map(s=>`<div class="item between"><span class="brand-t" style="font-weight:700">${money(s.amount)}</span><span>${esc(s.name)} • ${Math.round(s.percent)}%</span></div>`).join(""):'<div class="mut">لا مشتركين.</div>'}
+    </div>`).join("")}
+    <button class="btn pos" onclick="saveJard()" id="savebtn">⬇️ حفظ ملف ${monthAr(STATE.jmonth)}</button>`;
+}
+async function saveJard(){
+  const j=STATE.jcalc; if(!j)return; const bd=[];
+  j.tally.forEach(t=>bd.push({beneficiary:"البائع — "+t.name, amount:t.comm, basis:`طلع ${t.trips} مرّة • ${gn(t.grams)} جم`}));
+  j.result.forEach(m=>{ bd.push({beneficiary:m.name, amount:m.net, basis:`جابت ${gn(m.value)} − بائع ${gn(m.sellerCut)} − مصاريف ${gn(m.expShare)}`});
+    m.shares.forEach(s=>bd.push({beneficiary:`${m.name} ← ${s.name}`, amount:s.amount, basis:`${Math.round(s.percent)}%`})); });
+  await sb.from("gold_settlements").delete().eq("month",STATE.jmonth);
+  await sb.from("gold_settlements").insert({ user_id:uid(), month:STATE.jmonth, seller_name:null, total_sales:j.rValue, total_expenses:j.rExpenses, seller_amount:j.rSeller, total_grams:j.rGrams, breakdown:bd });
+  if(j.monthExpIds.length) await sb.from("gold_expenses").update({settled:true}).in("id",j.monthExpIds);
+  const b=$("#savebtn"); if(b){ b.textContent="تم حفظ ملف "+monthAr(STATE.jmonth)+" ✓"; b.disabled=true; }
+  const setls=await getJSON("gold_settlements"); renderFiles(setls);
+}
+function renderFiles(setls){
+  const box=$("#jfiles"); if(!box)return;
+  if(!setls.length){ box.innerHTML=""; return; }
+  box.innerHTML = `<div class="card"><div class="between"><span></span><b>📁 الملفات المحفوظة</b></div>
+    ${setls.map(st=>`<div class="item between" style="cursor:pointer" onclick='openFile(${JSON.stringify(JSON.stringify(st))})'>
+      <span class="green" style="font-weight:700">${money(st.total_sales)}</span>
+      <div style="text-align:right"><div>${monthAr(st.month)}</div><div class="mut">صافي ${money(st.total_sales-st.total_expenses-st.seller_amount)} • ${gn(st.total_grams)} جم</div></div>
+      <span style="display:flex;gap:8px"><span style="color:var(--sec)">›</span><button class="x" onclick="event.stopPropagation();delFile('${st.id}')">🗑</button></span></div>`).join("")}</div>`;
+}
+function openFile(js){
+  const st=JSON.parse(JSON.parse(js)); const bd=st.breakdown||[];
+  const sellers=bd.filter(b=>b.beneficiary.startsWith("البائع —"));
+  const ownerLines=bd.filter(b=>b.beneficiary.includes("←"));
+  const millLines=bd.filter(b=>!b.beneficiary.startsWith("البائع —")&&!b.beneficiary.includes("←"));
+  openSheet("جرد "+monthAr(st.month), `
+    <div class="grid2">
+      <div class="stat"><div class="ic" style="background:var(--pos)">💵</div><b>${money(st.total_sales)}</b><span>إجمالي المطاحن</span></div>
+      <div class="stat"><div class="ic" style="background:#e07a00">🧍</div><b>${money(st.seller_amount)}</b><span>عمولة البائعين</span></div>
+      <div class="stat"><div class="ic" style="background:var(--neg)">➖</div><b>${money(st.total_expenses)}</b><span>إجمالي المصاريف</span></div>
+      <div class="stat"><div class="ic" style="background:var(--brand)">🟰</div><b>${money(st.total_sales-st.total_expenses-st.seller_amount)}</b><span>الصافي</span></div>
+    </div>
+    ${sellers.length?`<div class="card"><div class="between"><span></span><b>🚶 مين طلع وكم له</b></div>
+      ${sellers.map(r=>`<div class="item between"><span class="orange-t" style="font-weight:700">${money(r.amount)}</span><div style="text-align:right"><div>${esc(r.beneficiary.replace("البائع — ",""))}</div><div class="mut">${esc(r.basis)}</div></div></div>`).join("")}</div>`:""}
+    <div class="card"><div class="between"><span></span><b>⚙️ المطاحن والمشتركون</b></div>
+      ${millLines.map(m=>`<div class="item between"><span class="brand-t" style="font-weight:700">${money(m.amount)}</span><div style="text-align:right"><div>صافي ${esc(m.beneficiary)}</div><div class="mut">${esc(m.basis)}</div></div></div>
+        ${ownerLines.filter(o=>o.beneficiary.startsWith(m.beneficiary+" ←")).map(o=>`<div class="item between" style="padding-right:12px"><span class="brand-t">${money(o.amount)}</span><span class="mut">${esc(o.beneficiary.split("← ").pop())} • ${esc(o.basis)}</span></div>`).join("")}`).join("")}
+    </div>`);
+}
+async function delFile(id){ if(!confirm("حذف الملف؟"))return; await sb.from("gold_settlements").delete().eq("id",id); draw(); }
+
+// ===== MANAGE (mills, owners, sellers) =====
+async function viewManage(){
+  setTitle("المطاحن والمشتركين");
+  const [mills, sellers] = await Promise.all([ getJSON("gold_mills"), getJSON("gold_sellers") ]);
+  const ownersByMill={};
+  await Promise.all(mills.map(async m=>{ ownersByMill[m.id]=(await sb.from("gold_mill_owners").select("*").eq("mill_id",m.id)).data||[]; }));
+  const v=$("#view"); if(!v)return;
+  v.innerHTML = `
+    <div class="card row" style="cursor:pointer" onclick="go('board')"><span>‹ رجوع للوحة</span></div>
+    ${mills.map(m=>{ const sum=(ownersByMill[m.id]||[]).reduce((a,b)=>a+b.percent,0); const ok=Math.abs(sum-100)<0.01;
+      return `<div class="card"><div class="between"><span class="${ok?'green':'orange-t'}" style="font-weight:700">${ok?'✓ 100%':Math.round(sum)+'%'}</span><div style="text-align:right"><b>${esc(m.name)}</b><div class="mut">${m.owner_kind==='mine'?'ملكي':'صديق'} • مصاريف ${Math.round(m.expense_percent||0)}%</div></div><button class="x" onclick="delMill('${m.id}')">🗑</button></div>
+        <div style="margin-top:8px">${(ownersByMill[m.id]||[]).map(o=>`<div class="item between"><span class="brand-t">${Math.round(o.percent)}%</span><span>${esc(o.owner_name)} <button class="x" style="font-size:16px" onclick="delOwner('${o.id}')">✕</button></span></div>`).join("")}</div>
+        <div class="row" style="margin-top:8px"><input id="on_${m.id}" placeholder="اسم المشترك" style="flex:2"><input id="op_${m.id}" type="number" placeholder="%" style="flex:1"><button class="btn sm brand" onclick="addOwner('${m.id}')">+</button></div>
+        <div class="row" style="margin-top:8px"><input id="ep_${m.id}" type="number" placeholder="نسبة المصاريف %" value="${Math.round(m.expense_percent||0)}" style="flex:2"><button class="btn sm gold" onclick="setExpPct('${m.id}','${esc(m.name)}','${m.owner_kind}')">حفظ %</button></div>
+      </div>`; }).join("")}
+    <div class="card"><div class="between"><span></span><b>➕ مطحنة جديدة</b></div>
+      <input id="nm_name" placeholder="اسم المطحنة" style="margin-bottom:8px">
+      <div class="seg" id="nm_kind"><button class="on" data-k="mine" onclick="pickKind('mine')">ملكي</button><button data-k="friend" onclick="pickKind('friend')">صديق</button></div>
+      <input id="nm_exp" type="number" placeholder="نسبة المصاريف %" style="margin:8px 0">
+      <button class="btn gold" onclick="addMill()">إضافة المطحنة</button>
+    </div>
+    <div class="card"><div class="between"><span></span><b>🧍 البائعون (مين يبيع)</b></div>
+      ${sellers.map(s=>`<div class="item between"><span class="orange-t" style="font-weight:700">${gn(s.per_gram_rate)} ﷼/جم</span><span>${esc(s.name)} <button class="x" onclick="delSeller('${s.id}')">✕</button></span></div>`).join("")||'<div class="mut">لا بائعين.</div>'}
+      <div class="row" style="margin-top:8px"><input id="sl_name" placeholder="اسم البائع" style="flex:2"><input id="sl_rate" type="number" value="12" style="flex:1"><button class="btn sm brand" onclick="addSeller()">+</button></div>
+    </div>`;
+  STATE.kind="mine";
+}
+function pickKind(k){ STATE.kind=k; document.querySelectorAll("#nm_kind button").forEach(b=>b.classList.toggle("on",b.dataset.k===k)); }
+async function addMill(){ const name=$("#nm_name").value.trim(); if(!name)return; await sb.from("gold_mills").insert({user_id:uid(),name,owner_kind:STATE.kind||"mine",expense_percent:parseFloat($("#nm_exp").value)||0,notes:null}); draw(); }
+async function delMill(id){ if(!confirm("حذف المطحنة وكل بياناتها؟"))return; await sb.from("gold_mills").delete().eq("id",id); draw(); }
+async function setExpPct(id,name,kind){ await sb.from("gold_mills").update({name,owner_kind:kind,expense_percent:parseFloat($("#ep_"+id).value)||0}).eq("id",id); draw(); }
+async function addOwner(mid){ const name=$("#on_"+mid).value.trim(), p=parseFloat($("#op_"+mid).value); if(!name||isNaN(p))return; await sb.from("gold_mill_owners").insert({user_id:uid(),mill_id:mid,owner_name:name,percent:p}); draw(); }
+async function delOwner(id){ await sb.from("gold_mill_owners").delete().eq("id",id); draw(); }
+async function addSeller(){ const name=$("#sl_name").value.trim(), r=parseFloat($("#sl_rate").value); if(!name||isNaN(r))return; await sb.from("gold_sellers").insert({user_id:uid(),name,per_gram_rate:r}); draw(); }
+async function delSeller(id){ await sb.from("gold_sellers").delete().eq("id",id); draw(); }
+
+// hook manage tab
+const _draw=draw;
+draw=function(){ if(TAB==="manage"){ viewManage(); return; } _draw(); };
+
+// ===== SHEETS =====
+function openSheet(title, html, big){
+  const m=document.createElement("div"); m.className="modal"; m.id="sheet";
+  m.onclick=e=>{ if(e.target===m) closeSheet(); };
+  m.innerHTML=`<div class="sheet"><div class="between" style="margin-bottom:10px"><button class="x" onclick="closeSheet()">✕</button><b>${title}</b></div>${html}</div>`;
+  document.body.appendChild(m);
+}
+function closeSheet(){ const s=$("#sheet"); if(s) s.remove(); }
+
+init();
+</script>
+</body>
+</html>
