@@ -142,9 +142,11 @@ async function viewBoard(){
      <div class="stat"><div class="ic" style="background:var(--brand)">⚙️</div><b>${mills.length}</b><span>المطاحن</span></div>
      <div class="stat"><div class="ic" style="background:var(--pos)">⚖️</div><b>${sales.length}</b><span>عمليات البيع</span></div>
    </div>
+   <div style="height:24px"></div>
    <div class="card row" style="justify-content:space-between;cursor:pointer" onclick="go('manage')">
      <span>⚙️</span><b>المطاحن والمشتركين</b><span style="margin-right:auto">›</span></div>
-   <button class="btn" style="background:#eee;color:#444" onclick="logout()">تسجيل الخروج</button>`;
+   <button class="btn" style="background:#eee;color:#444;margin-top:14px" onclick="logout()">تسجيل الخروج</button>
+   <div style="height:20px"></div>`;
   loadPrices();
 }
 function paintPrices(box,data){
@@ -174,7 +176,7 @@ async function viewExp(){
   v.innerHTML = keys.map(k=>{ const items=groups[k]; const tot=items.reduce((a,b)=>a+(+b.amount),0);
     return `<div class="card"><div class="between"><span class="sec">${items.length>1?money(tot):""}</span><b>${monthAr(k)}</b></div>
       ${items.map(e=>`<div class="item between"><span class="red" style="font-weight:700">${money(e.amount)}</span>
-        <div style="text-align:right"><div>${esc(e.category||"مصروف")}</div><div class="mut">${e.occurred_at?dayAr(e.occurred_at):""}</div></div>
+        <div style="text-align:right"><div>${esc(e.category||"مصروف")}</div>${e.notes?`<div class="mut">📝 ${esc(e.notes)}</div>`:""}<div class="mut">${e.occurred_at?dayAr(e.occurred_at):""}</div></div>
         <button class="x" onclick="delExp('${e.id}')">🗑</button></div>`).join("")}</div>`;
   }).join("") || `<div class="center">لا مصروفات غير مجرودة.</div>`;
   v.innerHTML += `<button class="btn neg" onclick="addExpSheet()">➕ إضافة مصروف</button>`;
@@ -248,11 +250,27 @@ async function delSale(id,millId){ if(!confirm("حذف البيعة؟"))return; 
 async function viewRep(){
   setTitle("التقارير");
   const [mills, sales] = await Promise.all([ getJSON("gold_mills"), getJSON("gold_sales") ]);
+  STATE.rep={mills,sales};
   const v=$("#view"); if(!v) return;
   v.innerHTML = mills.map(m=>{ const ms=sales.filter(s=>s.mill_id===m.id); const tot=ms.reduce((a,b)=>a+(+b.value),0);
-    return `<div class="card"><div class="between"><span class="green" style="font-weight:700">${money(tot)}</span><b>${esc(m.name)}</b></div>
-      ${ms.slice(0,12).map(s=>`<div class="item between"><span>${money(s.value)}</span><span class="mut">صافي ${gn(s.net_grams)} جم • ${s.created_at?dayAr(s.created_at):''}</span></div>`).join("")||'<div class="mut">لا بيعات.</div>'}</div>`;
+    return `<div class="card between" style="cursor:pointer" onclick="openReport('${m.id}')">
+      <span class="green" style="font-weight:700">${money(tot)}</span>
+      <div style="text-align:right;margin-right:auto"><b>${esc(m.name)}</b><div class="mut">${ms.length} بيعة • ${gn(ms.reduce((a,b)=>a+(+b.net_grams),0))} جم</div></div>
+      <span style="color:var(--sec)">›</span></div>`;
   }).join("") || `<div class="center">لا مطاحن بعد.</div>`;
+}
+function openReport(id){
+  const {mills,sales}=STATE.rep; const m=mills.find(x=>x.id===id); const ms=sales.filter(s=>s.mill_id===id);
+  const tot=ms.reduce((a,b)=>a+(+b.value),0), grams=ms.reduce((a,b)=>a+(+b.net_grams),0);
+  openSheet("تقرير "+esc(m.name), `
+    <div class="grid2">
+      <div class="stat"><div class="ic" style="background:var(--pos)">💵</div><b>${money(tot)}</b><span>إجمالي المبيعات</span></div>
+      <div class="stat"><div class="ic" style="background:#e07a00">⚖️</div><b>${gn(grams)} جم</b><span>إجمالي الجرامات</span></div>
+    </div>
+    <div class="card"><div class="between"><span class="sec">${ms.length} بيعة</span><b>كل البيعات</b></div>
+      ${ms.map(s=>`<div class="item between"><span class="green" style="font-weight:700">${money(s.value)}</span>
+        <div style="text-align:right"><div>صافي ${gn(s.net_grams)} جم${s.karat?' • عيار '+esc(s.karat):''}</div><div class="mut">${s.seller_name?'باعها '+esc(s.seller_name):'بدون بائع'} ${s.created_at?'• '+dayAr(s.created_at):''}</div></div></div>`).join("")||'<div class="mut">لا بيعات.</div>'}
+    </div>`);
 }
 
 // ===== JARD =====
@@ -329,15 +347,16 @@ async function saveJard(){
 }
 function renderFiles(setls){
   const box=$("#jfiles"); if(!box)return;
+  STATE.files=setls||[];
   if(!setls.length){ box.innerHTML=""; return; }
   box.innerHTML = `<div class="card"><div class="between"><span></span><b>📁 الملفات المحفوظة</b></div>
-    ${setls.map(st=>`<div class="item between" style="cursor:pointer" onclick='openFile(${JSON.stringify(JSON.stringify(st))})'>
+    ${setls.map((st,i)=>`<div class="item between" style="cursor:pointer" onclick="openFile(${i})">
       <span class="green" style="font-weight:700">${money(st.total_sales)}</span>
       <div style="text-align:right"><div>${monthAr(st.month)}</div><div class="mut">صافي ${money(st.total_sales-st.total_expenses-st.seller_amount)} • ${gn(st.total_grams)} جم</div></div>
       <span style="display:flex;gap:8px"><span style="color:var(--sec)">›</span><button class="x" onclick="event.stopPropagation();delFile('${st.id}')">🗑</button></span></div>`).join("")}</div>`;
 }
-function openFile(js){
-  const st=JSON.parse(JSON.parse(js)); const bd=st.breakdown||[];
+function openFile(i){
+  const st=(STATE.files||[])[i]; if(!st)return; const bd=st.breakdown||[];
   const sellers=bd.filter(b=>b.beneficiary.startsWith("البائع —"));
   const ownerLines=bd.filter(b=>b.beneficiary.includes("←"));
   const millLines=bd.filter(b=>!b.beneficiary.startsWith("البائع —")&&!b.beneficiary.includes("←"));
