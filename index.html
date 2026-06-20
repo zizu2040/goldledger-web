@@ -147,16 +147,20 @@ async function viewBoard(){
    <button class="btn" style="background:#eee;color:#444" onclick="logout()">تسجيل الخروج</button>`;
   loadPrices();
 }
+function paintPrices(box,data){
+  const order=["24","22","21","18","14"], p=data.prices||{};
+  const t=new Date().toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
+  const tag=data.siteUpdated?`● saudigoldprice • ${data.siteUpdated}`:`● مباشر ${t}`;
+  box.innerHTML=`<div class="between"><span class="green mut">${tag}</span><span class="sec">📈 أسعار الذهب الآن (﷼/جرام)</span></div>
+    <div class="scroll" style="margin-top:8px">${order.filter(k=>p[k]).map(k=>`<div class="price"><span>عيار ${k}</span><b>${(+p[k]).toFixed(2)}</b></div>`).join("")||'<span class="mut">…</span>'}</div>`;
+}
 async function loadPrices(){
   const box=$("#prices"); if(!box) return;
+  try{ const c=JSON.parse(localStorage.getItem("gp")||"null"); if(c&&c.prices) paintPrices(box,c); }catch(_){}
   try{
     const { data } = await sb.functions.invoke("gold-prices");
-    const order=["24","22","21","18","14"], p=data?.prices||{};
-    const t = new Date().toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
-    const tag = data?.siteUpdated ? `● saudigoldprice • ${data.siteUpdated}` : `● مباشر ${t}`;
-    box.innerHTML = `<div class="between"><span class="green mut">${tag}</span><span class="sec">📈 أسعار الذهب الآن (﷼/جرام)</span></div>
-      <div class="scroll" style="margin-top:8px">${order.filter(k=>p[k]).map(k=>`<div class="price"><span>عيار ${k}</span><b>${(+p[k]).toFixed(2)}</b></div>`).join("")||'<span class="mut">تعذّر الجلب</span>'}</div>`;
-  }catch(e){ box.innerHTML=`<span class="mut">تعذّر جلب الأسعار</span>`; }
+    if(data&&data.prices&&data.prices["24"]){ localStorage.setItem("gp",JSON.stringify(data)); if($("#prices")) paintPrices($("#prices"),data); }
+  }catch(e){ if(box&&!box.querySelector(".price")) box.innerHTML=`<span class="mut">تعذّر جلب الأسعار</span>`; }
   if(TAB==="board") setTimeout(loadPrices, 60000);
 }
 
