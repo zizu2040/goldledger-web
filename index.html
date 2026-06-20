@@ -91,7 +91,6 @@ function authView(){
       <input id="pw" placeholder="كلمة المرور" type="password" style="text-align:left;direction:ltr;margin-bottom:10px">
       <button class="btn gold" onclick="doLogin()">دخول</button>
       <div id="autherr" class="red mut" style="margin-top:8px"></div>
-      <div class="mut" style="margin-top:10px">ما عندك حساب؟ <a class="link" onclick="doSignup()">إنشاء حساب</a></div>
     </div>
    </div>`;
 }
@@ -99,12 +98,6 @@ async function doLogin(){
   const email=$("#em").value.trim(), password=$("#pw").value;
   const {error}=await sb.auth.signInWithPassword({email,password});
   if(error) $("#autherr").textContent="تعذّر الدخول: "+error.message;
-}
-async function doSignup(){
-  const email=$("#em").value.trim(), password=$("#pw").value;
-  if(!email||password.length<6){ $("#autherr").textContent="أدخل بريد وكلمة مرور (٦ أحرف+)"; return; }
-  const {error}=await sb.auth.signUp({email,password});
-  $("#autherr").textContent = error? ("خطأ: "+error.message) : "تم — تأكد من بريدك ثم سجّل الدخول.";
 }
 async function logout(){ await sb.auth.signOut(); USER=null; render(); }
 
