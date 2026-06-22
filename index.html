@@ -202,7 +202,7 @@ async function viewCalc(){
   const mills = await getJSON("gold_mills");
   const v=$("#view"); if(!v) return;
   v.innerHTML = mills.map(m=>`<div class="card row" style="justify-content:space-between;cursor:pointer" onclick="millCalc('${m.id}')">
-     <span style="color:var(--sec)">›</span><div style="text-align:right;margin-right:auto"><b>${esc(m.name)}</b><div class="mut">${m.owner_kind==='mine'?'ملكي':'صديق'}</div></div><span>⚙️</span></div>`).join("")
+     <span style="color:var(--sec)">›</span><div style="text-align:right;margin-right:auto"><b>${esc(m.name)}</b></div><span>⚙️</span></div>`).join("")
      || `<div class="center">لا مطاحن — أضفها من «اللوحة ← المطاحن والمشتركين».</div>`;
 }
 async function millCalc(id){
@@ -221,14 +221,15 @@ async function millCalc(id){
       <label class="lbl">الصافي بعد الصب (جم)</label><input id="snet" type="number" inputmode="decimal">
       <label class="lbl">العيار (مثل: فوق ٢١)</label><input id="skarat">
       <label class="lbl">سعر الجرام</label><input id="sprice" type="number" inputmode="decimal">
+      <label class="lbl">حق الصب (﷼) — يُخصم من المبلغ</label><input id="scast" type="number" inputmode="decimal" placeholder="0">
       <label class="lbl">مين باع</label>
       <div class="seg" id="sellseg">${sellers.length?sellers.map(s=>`<button data-id="${s.id}" class="${s.id===STATE.seller?'on':''}" onclick="pickSeller('${s.id}')">${esc(s.name)} — ${gn(s.per_gram_rate)}/جم</button>`).join(""):'<span class="mut">أضف بائع من «المطاحن والمشتركين».</span>'}</div>
       <button class="btn pos" style="margin-top:14px" onclick="saveSale('${id}')">✓ تسجيل البيع</button>
     </div>
     <div class="card"><div class="between"><span class="sec">إجمالي ${money(sales.reduce((a,b)=>a+(+b.value),0))}</span><b>بيعات المطحنة</b></div>
-      ${sales.map(s=>`<div class="item between"><span class="green" style="font-weight:700">${money(s.value)}</span>
-        <div style="text-align:right"><div>صافي ${gn(s.net_grams)} جم${s.karat?' • عيار '+esc(s.karat):''}</div><div class="mut">${s.seller_name?'باعها '+esc(s.seller_name):'بدون بائع'} ${s.created_at?'• '+dayAr(s.created_at):''}</div></div>
-        <button class="x" onclick="delSale('${s.id}','${id}')">🗑</button></div>`).join("")||'<div class="mut">لا بيعات.</div>'}
+      ${sales.map(s=>{const cast=(s.breakdown&&!Array.isArray(s.breakdown)&&+s.breakdown.casting)||0;return `<div class="item between"><span class="green" style="font-weight:700">${money(s.value)}</span>
+        <div style="text-align:right"><div>صافي ${gn(s.net_grams)} جم${s.karat?' • عيار '+esc(s.karat):''}${cast?' • صب '+money(cast):''}</div><div class="mut">${s.seller_name?'باعها '+esc(s.seller_name):'بدون بائع'} ${s.created_at?'• '+dayAr(s.created_at):''}</div></div>
+        <button class="x" onclick="delSale('${s.id}','${id}')">🗑</button></div>`}).join("")||'<div class="mut">لا بيعات.</div>'}
     </div>`;
   STATE.sellers=sellers;
   openSheet(esc(m.name), body, true);
@@ -238,10 +239,11 @@ async function saveSale(millId){
   const net=parseFloat($("#snet").value), price=parseFloat($("#sprice").value);
   if(isNaN(net)||isNaN(price)){ alert("أدخل الصافي والسعر"); return; }
   const raw=parseFloat($("#sraw").value); const karat=$("#skarat").value||null;
+  const cast=parseFloat($("#scast").value)||0;
   const sel=(STATE.sellers||[]).find(s=>s.id===STATE.seller);
   const now=new Date().toISOString();
   await sb.from("gold_production").insert({ user_id:uid(), operation_id:null, mill_id:millId, raw_grams:isNaN(raw)?net:raw, grams:net, karat, yield_date:now });
-  await sb.from("gold_sales").insert({ user_id:uid(), mill_id:millId, raw_grams:isNaN(raw)?net:raw, net_grams:net, karat, price, value:net*price, breakdown:[], seller_name:sel?.name||null, seller_rate:sel?.per_gram_rate||0 });
+  await sb.from("gold_sales").insert({ user_id:uid(), mill_id:millId, raw_grams:isNaN(raw)?net:raw, net_grams:net, karat, price, value:net*price-cast, breakdown:{casting:cast}, seller_name:sel?.name||null, seller_rate:sel?.per_gram_rate||0 });
   closeSheet(); millCalc(millId);
 }
 async function delSale(id,millId){ if(!confirm("حذف البيعة؟"))return; await sb.from("gold_sales").delete().eq("id",id); millCalc(millId); }
@@ -386,14 +388,13 @@ async function viewManage(){
   v.innerHTML = `
     <div class="card row" style="cursor:pointer" onclick="go('board')"><span>‹ رجوع للوحة</span></div>
     ${mills.map(m=>{ const sum=(ownersByMill[m.id]||[]).reduce((a,b)=>a+b.percent,0); const ok=Math.abs(sum-100)<0.01;
-      return `<div class="card"><div class="between"><span class="${ok?'green':'orange-t'}" style="font-weight:700">${ok?'✓ 100%':Math.round(sum)+'%'}</span><div style="text-align:right"><b>${esc(m.name)}</b><div class="mut">${m.owner_kind==='mine'?'ملكي':'صديق'} • مصاريف ${Math.round(m.expense_percent||0)}%</div></div><button class="x" onclick="delMill('${m.id}')">🗑</button></div>
+      return `<div class="card"><div class="between"><span class="${ok?'green':'orange-t'}" style="font-weight:700">${ok?'✓ 100%':Math.round(sum)+'%'}</span><div style="text-align:right"><b>${esc(m.name)}</b><div class="mut">مصاريف ${Math.round(m.expense_percent||0)}%</div></div><button class="x" onclick="delMill('${m.id}')">🗑</button></div>
         <div style="margin-top:8px">${(ownersByMill[m.id]||[]).map(o=>`<div class="item between"><span class="brand-t">${Math.round(o.percent)}%</span><span>${esc(o.owner_name)} <button class="x" style="font-size:16px" onclick="delOwner('${o.id}')">✕</button></span></div>`).join("")}</div>
         <div class="row" style="margin-top:8px"><input id="on_${m.id}" placeholder="اسم المشترك" style="flex:2"><input id="op_${m.id}" type="number" placeholder="%" style="flex:1"><button class="btn sm brand" onclick="addOwner('${m.id}')">+</button></div>
-        <div class="row" style="margin-top:8px"><input id="ep_${m.id}" type="number" placeholder="نسبة المصاريف %" value="${Math.round(m.expense_percent||0)}" style="flex:2"><button class="btn sm gold" onclick="setExpPct('${m.id}','${esc(m.name)}','${m.owner_kind}')">حفظ %</button></div>
+        <div class="row" style="margin-top:8px"><input id="ep_${m.id}" type="number" placeholder="نسبة المصاريف %" value="${Math.round(m.expense_percent||0)}" style="flex:2"><button class="btn sm gold" onclick="setExpPct('${m.id}','${esc(m.name)}')">حفظ %</button></div>
       </div>`; }).join("")}
     <div class="card"><div class="between"><span></span><b>➕ مطحنة جديدة</b></div>
       <input id="nm_name" placeholder="اسم المطحنة" style="margin-bottom:8px">
-      <div class="seg" id="nm_kind"><button class="on" data-k="mine" onclick="pickKind('mine')">ملكي</button><button data-k="friend" onclick="pickKind('friend')">صديق</button></div>
       <input id="nm_exp" type="number" placeholder="نسبة المصاريف %" style="margin:8px 0">
       <button class="btn gold" onclick="addMill()">إضافة المطحنة</button>
     </div>
@@ -401,12 +402,10 @@ async function viewManage(){
       ${sellers.map(s=>`<div class="item between"><span class="orange-t" style="font-weight:700">${gn(s.per_gram_rate)} ﷼/جم</span><span>${esc(s.name)} <button class="x" onclick="delSeller('${s.id}')">✕</button></span></div>`).join("")||'<div class="mut">لا بائعين.</div>'}
       <div class="row" style="margin-top:8px"><input id="sl_name" placeholder="اسم البائع" style="flex:2"><input id="sl_rate" type="number" value="12" style="flex:1"><button class="btn sm brand" onclick="addSeller()">+</button></div>
     </div>`;
-  STATE.kind="mine";
 }
-function pickKind(k){ STATE.kind=k; document.querySelectorAll("#nm_kind button").forEach(b=>b.classList.toggle("on",b.dataset.k===k)); }
-async function addMill(){ const name=$("#nm_name").value.trim(); if(!name)return; await sb.from("gold_mills").insert({user_id:uid(),name,owner_kind:STATE.kind||"mine",expense_percent:parseFloat($("#nm_exp").value)||0,notes:null}); draw(); }
+async function addMill(){ const name=$("#nm_name").value.trim(); if(!name)return; await sb.from("gold_mills").insert({user_id:uid(),name,owner_kind:"mine",expense_percent:parseFloat($("#nm_exp").value)||0,notes:null}); draw(); }
 async function delMill(id){ if(!confirm("حذف المطحنة وكل بياناتها؟"))return; await sb.from("gold_mills").delete().eq("id",id); draw(); }
-async function setExpPct(id,name,kind){ await sb.from("gold_mills").update({name,owner_kind:kind,expense_percent:parseFloat($("#ep_"+id).value)||0}).eq("id",id); draw(); }
+async function setExpPct(id,name){ await sb.from("gold_mills").update({name,expense_percent:parseFloat($("#ep_"+id).value)||0}).eq("id",id); draw(); }
 async function addOwner(mid){ const name=$("#on_"+mid).value.trim(), p=parseFloat($("#op_"+mid).value); if(!name||isNaN(p))return; await sb.from("gold_mill_owners").insert({user_id:uid(),mill_id:mid,owner_name:name,percent:p}); draw(); }
 async function delOwner(id){ await sb.from("gold_mill_owners").delete().eq("id",id); draw(); }
 async function addSeller(){ const name=$("#sl_name").value.trim(), r=parseFloat($("#sl_rate").value); if(!name||isNaN(r))return; await sb.from("gold_sellers").insert({user_id:uid(),name,per_gram_rate:r}); draw(); }
